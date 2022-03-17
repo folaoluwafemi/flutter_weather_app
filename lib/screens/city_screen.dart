@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_weather_app/screens/location_screen.dart';
-import 'package:flutter_weather_app/services/network_services.dart';
+import 'package:flutter_weather_app/models/models.dart';
 import 'package:flutter_weather_app/utils/util_methods.dart';
 
 class CityScreen extends StatefulWidget {
@@ -13,6 +12,8 @@ class CityScreen extends StatefulWidget {
 }
 
 class _CityScreenState extends State<CityScreen> {
+  bool onError = false;
+
   @override
   Widget build(BuildContext context) {
     String newCity = '';
@@ -52,7 +53,7 @@ class _CityScreenState extends State<CityScreen> {
                         color: Colors.black54.withOpacity(0.4),
                       ),
                     ),
-                    onChanged: (value){
+                    onChanged: (value) {
                       newCity = value;
                     },
                   ),
@@ -63,12 +64,22 @@ class _CityScreenState extends State<CityScreen> {
                 TextButton(
                   onPressed: () async {
                     print('new city: $newCity');
-
-                    var city = await getCity(newCity);
-
-
-                    print(city);
-                    Navigator.of(context).pushNamed(LocationScreen.id);
+                    if (newCity == '') {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content:
+                              Text("Sorry I don't know the city \u{1f97a}"),
+                        ),
+                      );
+                    } else {
+                      Coordinate city =
+                          await CoordinatesModel.fromCity(newCity);
+                      setState(() {
+                        onError = false;
+                      });
+                      print(city);
+                      Navigator.of(context).pop(city);
+                    }
                   },
                   child: const Text(
                     'Get Weather',

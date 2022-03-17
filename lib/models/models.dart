@@ -7,6 +7,10 @@ const apiKey = '421c144f1b0e8be2ba9c473f05cde42a';
 
 class WeatherModel {
   int temperature = 0;
+  static String tempKey = 'temperature';
+  static String conditionKey = 'condition';
+  static String humidityKey = 'humidity';
+  static String cityNameKey = 'cityName';
 
   WeatherModel._singletonConstructor();
 
@@ -20,28 +24,57 @@ class WeatherModel {
       return _weather!;
     }
     _weather = await loadWeather();
-    return _weather! ;
+    return _weather!;
   }
 
-
   Future<Map> loadWeather() async {
-    String lat = '4.63063063063063';
-    String long = '7.953890530';
-    String url =
-        'https://api.openweathermap.org/data/2.5/weather?lat=$lat&lon=$long&appid=421c144f1b0e8be2ba9c473f05cde42a&unit=metric';
-    http.Response response = await http.get(Uri.parse(url));
-    print('Weather getter status code: ${response.statusCode}');
+    double lat = 4.63063063063063;
+    double long = 7.953890530;
+
+    http.Response response =
+        await _getWeather(Coordinate(latitude: lat, longitude: long));
 
     var json = jsonDecode(response.body);
 
-    var temp = json['main']['temp'] - 273 as double;
+    var temp = (json['main']['temp'] - 273 as double).toInt();
     var humidity = json['main']['humidity'] as int;
+    var cityName = json['name'] as String;
+    int condition = json['weather'][0]['id'];
     temperature = temp.toInt();
     return Map.of({
-      'temp': temp,
-      'humidity': humidity,
+      tempKey: temp,
+      humidityKey: humidity,
+      conditionKey: condition,
+      cityNameKey: cityName,
     });
   }
+
+  Future<Map> fromCoordinate(Coordinate coordinate) async {
+    http.Response response = await _getWeather(Coordinate(
+        latitude: coordinate.latitude, longitude: coordinate.longitude));
+
+    var json = jsonDecode(response.body);
+
+    var temp = (json['main']['temp'] - 273 as double).toInt();
+    var humidity = json['main']['humidity'] as int;
+    var cityName = json['name'] as String;
+    int condition = json['weather'][0]['id'];
+    temperature = temp.toInt();
+    return Map.of({
+      tempKey: temp,
+      humidityKey: humidity,
+      conditionKey: condition,
+      cityNameKey: cityName,
+    });
+  }
+}
+
+Future<http.Response> _getWeather(Coordinate coordinates) async {
+  String url =
+      'https://api.openweathermap.org/data/2.5/weather?lat=${coordinates.latitude}&lon=${coordinates.longitude}&appid=421c144f1b0e8be2ba9c473f05cde42a&unit=metric';
+  http.Response response = await http.get(Uri.parse(url));
+  print('Weather getter status code: ${response.statusCode}');
+  return response;
 }
 
 class CoordinatesModel {
@@ -50,9 +83,8 @@ class CoordinatesModel {
   CoordinatesModel._singletonConstructor();
 
   static CoordinatesModel instance = CoordinatesModel._singletonConstructor();
-
-  static double? latitude;
-  static double? longitude;
+  double? latitude;
+  double? longitude;
 
   Map<String, double?>? coordinates;
 
@@ -94,10 +126,7 @@ class CoordinatesModel {
         desiredAccuracy: LocationAccuracy.high);
     latitude = currentPosition.latitude;
     longitude = currentPosition.longitude;
-    return Map.of({
-      'lat': latitude,
-      'long': longitude,
-    });
+    return Coordinate(latitude: latitude!, longitude: longitude!);
   }
 
   Future getLastPosition() async {
@@ -107,28 +136,50 @@ class CoordinatesModel {
       longitude = location.longitude;
       latitude = location.latitude;
 
-      return Map.of({
-        'lat': latitude,
-        'long': longitude,
-      });
+      return Coordinate(latitude: latitude!, longitude: longitude!);
     }
     return Future.error('unknown last position');
   }
 
-  static dynamic fromCity(String newCity) async {
-    String url =
-        'http://api.openweathermap.org/geo/1.0/direct?q=$newCity&appid=421c144f1b0e8be2ba9c473f05cde42a';
-    http.Response response = await http.get(Uri.parse(url));
-    print('City getter status code: ${response.statusCode}');
-    if (response.statusCode == 200) {
-      var json = jsonDecode(response.body) as List<Map>;
-      latitude = json[0]['lat'];
-      longitude = json[0]['lon'];
-      return Map.from({
-        'lat': latitude,
-        'long': longitude,
-      });
+  static Future<Coordinate> fromCity(String newCity) async {
+    http.Response response = await getCity(newCity);
+    if (response.statusCode >= 400 && response.statusCode < 500) {
+      return Future.error('unable to retrieve data');
     }
-    return jsonDecode(response.body);
+    var json = jsonDecode(response.body) as List;
+    double latitude = json[0]['lat'];
+    double longitude = json[0]['lon'];
+    return Coordinate(latitude: latitude, longitude: longitude);
   }
+}
+
+class Coordinate {
+  double latitude;
+  double longitude;
+
+  Coordinate({
+    required this.latitude,
+    required this.longitude,
+  });
+
+  Coordinate get coordinate {
+    return Coordinate(latitude: latitude, longitude: longitude);
+  }
+
+  void set(Coordinate newCoordinates) {
+    latitude = newCoordinates.latitude;
+    longitude = newCoordinates.longitude;
+  }
+
+  @override
+  String toString() {
+    return 'latitude: $latitude\nlongitude: $longitude';
+  }
+}
+
+Future<http.Response> getCity(city) async {
+  String url =
+      'http://api.openweathermap.org/geo/1.0/direct?q=$city&appid=421c144f1b0e8be2ba9c473f05cde42a';
+  http.Response response = await http.get(Uri.parse(url));
+  return response;
 }

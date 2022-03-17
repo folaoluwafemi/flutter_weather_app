@@ -1,9 +1,7 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_weather_app/screens/city_screen.dart';
 import 'package:flutter_weather_app/screens/loading_screen.dart';
 import 'package:flutter_weather_app/screens/location_screen.dart';
-import 'package:flutter_weather_app/services/location_service.dart';
 
 void main() async {
   runApp(const WeatherApp());
@@ -16,16 +14,14 @@ class WeatherApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: ThemeData.dark(),
-      initialRoute: CityScreen.id,
+      initialRoute: LocationScreen.id,
       onGenerateRoute: (settings) {
         if (settings.name == CityScreen.id) {
           return MaterialPageRoute(builder: (context) => const CityScreen());
-        }
-        else if (settings.name == LocationScreen.id) {
+        } else if (settings.name == LocationScreen.id) {
           return MaterialPageRoute(
               builder: (context) => const LocationScreen());
-        }
-        else if (settings.name == LoadingScreen.id) {
+        } else if (settings.name == LoadingScreen.id) {
           return MaterialPageRoute(builder: (context) => const LoadingScreen());
         } else {
           return MaterialPageRoute(builder: (context) {
